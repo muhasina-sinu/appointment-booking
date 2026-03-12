@@ -1,0 +1,46 @@
+# .github/workflows/daily-slots.yml
+#
+# Runs every day at midnight UTC and creates appointment slots
+# for the next 7 days. Idempotent — safe to re-run.
+#
+# Required secret:
+#   DATABASE_URL — your production PostgreSQL connection string
+#     e.g. postgresql://user:pass@host:5432/appointment_booking
+
+name: Daily Slot Generation
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  create-slots:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: appointment-booking-system/backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: appointment-booking-system/backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Create daily slots
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx ts-node scripts/create-daily-slots.ts 7
