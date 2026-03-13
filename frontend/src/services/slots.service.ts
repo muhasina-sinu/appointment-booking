@@ -1,5 +1,5 @@
 import api from './api';
-import { Slot } from '@/types';
+import { Slot, PaginatedResponse } from '@/types';
 
 export const slotsService = {
   async getAvailable(date?: string): Promise<Slot[]> {
@@ -13,11 +13,16 @@ export const slotsService = {
     return data;
   },
 
-  async getAll(date?: string, period?: string): Promise<Slot[]> {
-    const params: any = {};
+  async getAll(
+    date?: string,
+    period?: string,
+    page = 1,
+    limit = 10,
+  ): Promise<PaginatedResponse<Slot>> {
+    const params: any = { page, limit };
     if (date) params.date = date;
     if (period) params.period = period;
-    const { data } = await api.get<Slot[]>('/slots/all', { params });
+    const { data } = await api.get<PaginatedResponse<Slot>>('/slots/all', { params });
     return data;
   },
 

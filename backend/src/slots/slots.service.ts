@@ -10,6 +10,14 @@ import { CreateSlotDto } from './dto';
 export class SlotsService {
   constructor(private prisma: PrismaService) {}
 
+  /** Get today's date as a UTC midnight Date, timezone-safe for Postgres @db.Date comparisons */
+  private getTodayUTC(): Date {
+    const now = new Date();
+    return new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+    );
+  }
+
   async create(dto: CreateSlotDto) {
     // Validate that end time is after start time
     if (dto.startTime >= dto.endTime) {
@@ -17,10 +25,8 @@ export class SlotsService {
     }
 
     // Prevent creating slots in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const slotDate = new Date(dto.date);
-    slotDate.setHours(0, 0, 0, 0);
+    const today = this.getTodayUTC();
+    const slotDate = new Date(dto.date + 'T00:00:00.000Z');
 
     if (slotDate < today) {
       throw new BadRequestException('Cannot create a slot in the past');
@@ -51,41 +57,55 @@ export class SlotsService {
     });
   }
 
-  async findAll(date?: string, period?: string) {
+  async findAll(date?: string, period?: string, page = 1, limit = 10) {
     const where: any = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.getTodayUTC();
 
     if (date) {
-      where.date = new Date(date);
+      where.date = new Date(date + 'T00:00:00.000Z');
     } else if (period === 'upcoming') {
       where.date = { gte: today };
     } else if (period === 'past') {
       where.date = { lt: today };
     }
 
-    return this.prisma.slot.findMany({
-      where,
-      include: {
-        appointment: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+    const [data, total] = await Promise.all([
+      this.prisma.slot.findMany({
+        where,
+        include: {
+          appointment: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-    });
+        orderBy:
+          period === 'past'
+            ? [{ date: 'desc' }, { startTime: 'desc' }]
+            : [{ date: 'asc' }, { startTime: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.slot.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findAvailable(date?: string) {
     const where: any = { isBooked: false };
-    const today = new Date();
+    const today = this.getTodayUTC();
     const todayStr = today.toISOString().split('T')[0];
 
     if (date) {
@@ -93,10 +113,10 @@ export class SlotsService {
       if (date < todayStr) {
         return [];
       }
-      where.date = new Date(date);
+      where.date = new Date(date + 'T00:00:00.000Z');
     } else {
       // Only show future slots
-      where.date = { gte: new Date(todayStr) };
+      where.date = { gte: today };
     }
 
     const slots = await this.prisma.slot.findMany({
@@ -105,17 +125,15 @@ export class SlotsService {
     });
 
     // Filter out today's slots whose start time has already passed
-    const nowHours = today.getHours();
-    const nowMinutes = today.getMinutes();
+    const now = new Date();
+    const nowHours = now.getHours();
+    const nowMinutes = now.getMinutes();
 
     return slots.filter((slot) => {
-      const slotDate = new Date(slot.date);
-      slotDate.setHours(0, 0, 0, 0);
-      const todayDate = new Date(today);
-      todayDate.setHours(0, 0, 0, 0);
+      const slotDateStr = new Date(slot.date).toISOString().split('T')[0];
 
       // Future dates — always include
-      if (slotDate.getTime() > todayDate.getTime()) {
+      if (slotDateStr > todayStr) {
         return true;
       }
 

@@ -37,9 +37,10 @@ async function main() {
   let skipped = 0;
 
   for (let i = 1; i <= 7; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    date.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const date = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + i),
+    );
 
     for (const slot of timeSlots) {
       const existing = await prisma.slot.findFirst({

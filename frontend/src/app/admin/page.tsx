@@ -10,6 +10,7 @@ import { formatTime } from '@/utils/formatTime';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Pagination from '@/components/ui/Pagination';
 import {
   FiCalendar,
   FiClock,
@@ -32,6 +33,21 @@ export default function AdminDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState('');
+
+  // Pagination state
+  const ITEMS_PER_PAGE = 10;
+  const [slotsPage, setSlotsPage] = useState(1);
+  const [slotsTotalPages, setSlotsTotalPages] = useState(1);
+  const [slotsTotal, setSlotsTotal] = useState(0);
+  const [pastSlotsPage, setPastSlotsPage] = useState(1);
+  const [pastSlotsTotalPages, setPastSlotsTotalPages] = useState(1);
+  const [pastSlotsTotal, setPastSlotsTotal] = useState(0);
+  const [appointmentsPage, setAppointmentsPage] = useState(1);
+  const [appointmentsTotalPages, setAppointmentsTotalPages] = useState(1);
+  const [appointmentsTotal, setAppointmentsTotal] = useState(0);
+  // Stats: confirmed bookings count + available slots count
+  const [confirmedBookingsCount, setConfirmedBookingsCount] = useState(0);
+  const [availableSlotsCount, setAvailableSlotsCount] = useState(0);
 
   // Slot creation form
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -61,24 +77,63 @@ export default function AdminDashboard() {
         return;
       }
       fetchData();
+      fetchStats();
     }
-  }, [isAuthenticated, isAdmin, authLoading, filterDate, activeTab]);
+  }, [isAuthenticated, isAdmin, authLoading, filterDate, activeTab, slotsPage, pastSlotsPage, appointmentsPage]);
+
+  // Fetch summary counts for stats cards (runs on mount + when filter changes)
+  const fetchStats = async () => {
+    try {
+      const [upcomingRes, confirmedRes] = await Promise.all([
+        slotsService.getAll(undefined, 'upcoming', 1, 1),
+        appointmentsService.getAll(undefined, 1, 1, 'CONFIRMED'),
+      ]);
+      setSlotsTotal(upcomingRes.total);
+      setConfirmedBookingsCount(confirmedRes.total);
+      // Available = upcoming slots that are not booked
+      const available = upcomingRes.data.filter((s) => !s.isBooked).length;
+      // Use a larger fetch for accurate available count
+      const bigRes = await slotsService.getAll(undefined, 'upcoming', 1, 1000);
+      setAvailableSlotsCount(bigRes.data.filter((s) => !s.isBooked).length);
+    } catch {
+      // stats are best-effort
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
       if (activeTab === 'pastSlots') {
         // Past Slots tab — fetch only past slots
-        const pastData = await slotsService.getAll(filterDate || undefined, filterDate ? undefined : 'past');
-        setPastSlots(pastData);
+        const pastRes = await slotsService.getAll(
+          filterDate || undefined,
+          filterDate ? undefined : 'past',
+          pastSlotsPage,
+          ITEMS_PER_PAGE,
+        );
+        setPastSlots(pastRes.data);
+        setPastSlotsTotal(pastRes.total);
+        setPastSlotsTotalPages(pastRes.totalPages);
+      } else if (activeTab === 'appointments') {
+        const apptRes = await appointmentsService.getAll(
+          filterDate || undefined,
+          appointmentsPage,
+          ITEMS_PER_PAGE,
+        );
+        setAppointments(apptRes.data);
+        setAppointmentsTotal(apptRes.total);
+        setAppointmentsTotalPages(apptRes.totalPages);
       } else {
-        // Slots (upcoming) + Appointments tabs
-        const [slotsData, appointmentsData] = await Promise.all([
-          slotsService.getAll(filterDate || undefined, filterDate ? undefined : 'upcoming'),
-          appointmentsService.getAll(filterDate || undefined),
-        ]);
-        setSlots(slotsData);
-        setAppointments(appointmentsData);
+        // Slots (upcoming) tab
+        const slotsRes = await slotsService.getAll(
+          filterDate || undefined,
+          filterDate ? undefined : 'upcoming',
+          slotsPage,
+          ITEMS_PER_PAGE,
+        );
+        setSlots(slotsRes.data);
+        setSlotsTotal(slotsRes.total);
+        setSlotsTotalPages(slotsRes.totalPages);
       }
     } catch (error) {
       toast.error('Failed to load data');
@@ -166,8 +221,8 @@ export default function AdminDashboard() {
               <FiCalendar className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{slots.length}</p>
-              <p className="text-sm text-gray-500">Total Slots</p>
+              <p className="text-2xl font-bold text-gray-900">{slotsTotal}</p>
+              <p className="text-sm text-gray-500">Upcoming Slots</p>
             </div>
           </div>
           <div className="card flex items-center gap-4">
@@ -176,7 +231,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {appointments.filter((a) => a.status === 'CONFIRMED').length}
+                {confirmedBookingsCount}
               </p>
               <p className="text-sm text-gray-500">Active Bookings</p>
             </div>
@@ -187,7 +242,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {slots.filter((s) => !s.isBooked).length}
+                {availableSlotsCount}
               </p>
               <p className="text-sm text-gray-500">Available Slots</p>
             </div>
@@ -198,7 +253,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab('slots')}
+              onClick={() => { setActiveTab('slots'); setSlotsPage(1); }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'slots'
                   ? 'bg-primary-600 text-white'
@@ -211,7 +266,7 @@ export default function AdminDashboard() {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('pastSlots')}
+              onClick={() => { setActiveTab('pastSlots'); setPastSlotsPage(1); }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'pastSlots'
                   ? 'bg-primary-600 text-white'
@@ -224,7 +279,7 @@ export default function AdminDashboard() {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('appointments')}
+              onClick={() => { setActiveTab('appointments'); setAppointmentsPage(1); }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'appointments'
                   ? 'bg-primary-600 text-white'
@@ -242,12 +297,22 @@ export default function AdminDashboard() {
             <input
               type="date"
               value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
+              onChange={(e) => {
+                setFilterDate(e.target.value);
+                setSlotsPage(1);
+                setPastSlotsPage(1);
+                setAppointmentsPage(1);
+              }}
               className="input-field w-auto"
             />
             {filterDate && (
               <button
-                onClick={() => setFilterDate('')}
+                onClick={() => {
+                  setFilterDate('');
+                  setSlotsPage(1);
+                  setPastSlotsPage(1);
+                  setAppointmentsPage(1);
+                }}
                 className="text-sm text-primary-600 hover:text-primary-700"
               >
                 Clear
@@ -433,6 +498,13 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 )}
+
+                <Pagination
+                  page={slotsPage}
+                  totalPages={slotsTotalPages}
+                  total={slotsTotal}
+                  onPageChange={setSlotsPage}
+                />
               </div>
             )}
 
@@ -509,6 +581,13 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 )}
+
+                <Pagination
+                  page={pastSlotsPage}
+                  totalPages={pastSlotsTotalPages}
+                  total={pastSlotsTotal}
+                  onPageChange={setPastSlotsPage}
+                />
               </div>
             )}
 
@@ -526,25 +605,25 @@ export default function AdminDashboard() {
                   />
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full table-auto min-w-[700px]">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Client
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Phone
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Email
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Date
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Time
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">
                             Status
                           </th>
                         </tr>
@@ -555,18 +634,20 @@ export default function AdminDashboard() {
                             key={appointment.id}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
-                            <td className="py-3 px-4">
-                              <p className="font-medium text-gray-900">
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-gray-900 break-words max-w-[150px]">
                                 {appointment.user?.name || appointment.clientName || 'Walk-in'}
                               </p>
                             </td>
-                            <td className="py-3 px-4 text-gray-600 text-sm">
+                            <td className="py-3 px-3 text-gray-600 text-sm whitespace-nowrap">
                               {appointment.user?.phone || appointment.clientPhone || '—'}
                             </td>
-                            <td className="py-3 px-4 text-gray-600 text-sm">
-                              {appointment.user?.email || appointment.clientEmail || '—'}
+                            <td className="py-3 px-3 text-gray-600 text-sm">
+                              <span className="break-all max-w-[180px] block">
+                                {appointment.user?.email || appointment.clientEmail || '—'}
+                              </span>
                             </td>
-                            <td className="py-3 px-4 text-gray-600">
+                            <td className="py-3 px-3 text-gray-600 text-sm whitespace-nowrap">
                               {new Date(
                                 appointment.slot.date,
                               ).toLocaleDateString('en-US', {
@@ -575,13 +656,13 @@ export default function AdminDashboard() {
                                 year: 'numeric',
                               })}
                             </td>
-                            <td className="py-3 px-4 text-gray-600">
-                              {formatTime(appointment.slot.startTime)} -{' '}
+                            <td className="py-3 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatTime(appointment.slot.startTime)} –{' '}
                               {formatTime(appointment.slot.endTime)}
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-3">
                               <span
-                                className={`text-xs font-medium px-3 py-1 rounded-full ${
+                                className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${
                                   appointment.status === 'CONFIRMED'
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-red-100 text-red-700'
@@ -596,6 +677,13 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 )}
+
+                <Pagination
+                  page={appointmentsPage}
+                  totalPages={appointmentsTotalPages}
+                  total={appointmentsTotal}
+                  onPageChange={setAppointmentsPage}
+                />
               </div>
             )}
           </>

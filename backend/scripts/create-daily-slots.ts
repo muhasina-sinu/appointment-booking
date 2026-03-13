@@ -38,9 +38,10 @@ async function createDailySlots(daysAhead: number = 7) {
   let skipped = 0;
 
   for (let i = 1; i <= daysAhead; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    date.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const date = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + i),
+    );
 
     // Skip configured days (e.g. weekends)
     if (SKIP_DAYS.includes(date.getDay())) {

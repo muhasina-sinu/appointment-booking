@@ -31,6 +31,7 @@ describe('AppointmentsService', () => {
     appointment: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -166,8 +167,10 @@ describe('AppointmentsService', () => {
       const tx = setupTransaction();
 
       // Use a time that's definitely in the past (midnight)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+      );
 
       tx.slot.findUnique.mockResolvedValue({
         id: 'slot-expired',

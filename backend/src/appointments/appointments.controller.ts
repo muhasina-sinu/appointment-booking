@@ -33,10 +33,18 @@ export class AppointmentsController {
   }
 
   @Get()
-  async findAll(@Request() req: any, @Query('date') date?: string) {
-    // Admin sees all appointments, user sees their own
+  async findAll(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    // Admin sees all appointments (paginated), user sees their own
     if (req.user.role === Role.ADMIN) {
-      return this.appointmentsService.findAll(date);
+      const p = Math.max(1, parseInt(page || '1', 10) || 1);
+      const l = Math.min(100, Math.max(1, parseInt(limit || '10', 10) || 10));
+      return this.appointmentsService.findAll(date, p, l, status);
     }
     return this.appointmentsService.findByUser(req.user.id);
   }

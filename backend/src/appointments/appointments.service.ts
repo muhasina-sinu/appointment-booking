@@ -27,10 +27,13 @@ export class AppointmentsService {
       }
 
       // Prevent booking past slots
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const slotDate = new Date(slot.date);
-      slotDate.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+      );
+      const slotDate = new Date(
+        new Date(slot.date).toISOString().split('T')[0] + 'T00:00:00.000Z',
+      );
 
       if (slotDate < today) {
         throw new BadRequestException('Cannot book a slot in the past');
@@ -38,7 +41,6 @@ export class AppointmentsService {
 
       if (slotDate.getTime() === today.getTime()) {
         // Same day — check if slot time has already passed
-        const now = new Date();
         const [hours, minutes] = slot.startTime.split(':').map(Number);
         if (hours < now.getHours() || (hours === now.getHours() && minutes <= now.getMinutes())) {
           throw new BadRequestException('This time slot has already passed');
@@ -94,10 +96,13 @@ export class AppointmentsService {
       }
 
       // Prevent booking past slots
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const slotDate = new Date(slot.date);
-      slotDate.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+      );
+      const slotDate = new Date(
+        new Date(slot.date).toISOString().split('T')[0] + 'T00:00:00.000Z',
+      );
 
       if (slotDate < today) {
         throw new BadRequestException('Cannot book a slot in the past');
@@ -129,28 +134,44 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async findAll(date?: string) {
+  async findAll(date?: string, page = 1, limit = 10, status?: string) {
     const where: any = {};
 
     if (date) {
-      where.slot = { date: new Date(date) };
+      where.slot = { date: new Date(date + 'T00:00:00.000Z') };
     }
 
-    return this.prisma.appointment.findMany({
-      where,
-      include: {
-        slot: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
+    if (status === 'CONFIRMED' || status === 'CANCELLED') {
+      where.status = status;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        include: {
+          slot: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findByUser(userId: string) {

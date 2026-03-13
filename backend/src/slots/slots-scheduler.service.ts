@@ -53,9 +53,10 @@ export class SlotsSchedulerService {
     let skipped = 0;
 
     for (let i = 1; i <= this.DAYS_AHEAD; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() + i);
-      date.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const date = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + i),
+      );
 
       if (this.SKIP_DAYS.includes(date.getDay())) {
         continue;
