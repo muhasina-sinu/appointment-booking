@@ -26,8 +26,9 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'slots' | 'appointments'>('slots');
+  const [activeTab, setActiveTab] = useState<'slots' | 'pastSlots' | 'appointments'>('slots');
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [pastSlots, setPastSlots] = useState<Slot[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState('');
@@ -61,17 +62,24 @@ export default function AdminDashboard() {
       }
       fetchData();
     }
-  }, [isAuthenticated, isAdmin, authLoading, filterDate]);
+  }, [isAuthenticated, isAdmin, authLoading, filterDate, activeTab]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [slotsData, appointmentsData] = await Promise.all([
-        slotsService.getAll(filterDate || undefined),
-        appointmentsService.getAll(filterDate || undefined),
-      ]);
-      setSlots(slotsData);
-      setAppointments(appointmentsData);
+      if (activeTab === 'pastSlots') {
+        // Past Slots tab — fetch only past slots
+        const pastData = await slotsService.getAll(filterDate || undefined, filterDate ? undefined : 'past');
+        setPastSlots(pastData);
+      } else {
+        // Slots (upcoming) + Appointments tabs
+        const [slotsData, appointmentsData] = await Promise.all([
+          slotsService.getAll(filterDate || undefined, filterDate ? undefined : 'upcoming'),
+          appointmentsService.getAll(filterDate || undefined),
+        ]);
+        setSlots(slotsData);
+        setAppointments(appointmentsData);
+      }
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -200,6 +208,19 @@ export default function AdminDashboard() {
               <span className="flex items-center gap-2">
                 <FiCalendar className="h-4 w-4" />
                 Slots
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('pastSlots')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'pastSlots'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <FiClock className="h-4 w-4" />
+                Past Slots
               </span>
             </button>
             <button
@@ -405,6 +426,82 @@ export default function AdminDashboard() {
                               >
                                 <FiTrash2 className="h-4 w-4" />
                               </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Past Slots Tab */}
+            {activeTab === 'pastSlots' && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Past Slots
+                </h2>
+
+                {pastSlots.length === 0 ? (
+                  <EmptyState
+                    title="No Past Slots"
+                    message="No past time slots found."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {pastSlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className="card hover:shadow-md transition-shadow opacity-75"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2 rounded-lg ${
+                                slot.isBooked
+                                  ? 'bg-red-100 text-red-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              <FiClock className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {new Date(slot.date).toLocaleDateString(
+                                  'en-US',
+                                  {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric',
+                                  },
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`text-xs font-medium px-3 py-1 rounded-full ${
+                                slot.isBooked
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {slot.isBooked ? 'Was Booked' : 'Unused'}
+                            </span>
+                            {slot.isBooked && slot.appointment?.user && slot.appointment.status === 'CONFIRMED' && (
+                              <span className="text-sm text-gray-500">
+                                by {slot.appointment.user.name}
+                              </span>
+                            )}
+                            {slot.isBooked && slot.appointment?.clientName && slot.appointment.status === 'CONFIRMED' && (
+                              <span className="text-sm text-gray-500">
+                                by {slot.appointment.clientName}
+                              </span>
                             )}
                           </div>
                         </div>

@@ -33,8 +33,11 @@ export class SlotsController {
   @Get('all')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.ADMIN)
-  async findAllAdmin(@Query('date') date?: string) {
-    return this.slotsService.findAll(date);
+  async findAllAdmin(
+    @Query('date') date?: string,
+    @Query('period') period?: string,
+  ) {
+    return this.slotsService.findAll(date, period);
   }
 
   @Get(':id')

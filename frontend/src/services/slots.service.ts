@@ -13,8 +13,10 @@ export const slotsService = {
     return data;
   },
 
-  async getAll(date?: string): Promise<Slot[]> {
-    const params = date ? { date } : {};
+  async getAll(date?: string, period?: string): Promise<Slot[]> {
+    const params: any = {};
+    if (date) params.date = date;
+    if (period) params.period = period;
     const { data } = await api.get<Slot[]>('/slots/all', { params });
     return data;
   },

@@ -51,8 +51,18 @@ export class SlotsService {
     });
   }
 
-  async findAll(date?: string) {
-    const where = date ? { date: new Date(date) } : {};
+  async findAll(date?: string, period?: string) {
+    const where: any = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (date) {
+      where.date = new Date(date);
+    } else if (period === 'upcoming') {
+      where.date = { gte: today };
+    } else if (period === 'past') {
+      where.date = { lt: today };
+    }
 
     return this.prisma.slot.findMany({
       where,
