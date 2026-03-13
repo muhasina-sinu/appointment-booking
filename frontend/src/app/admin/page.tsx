@@ -90,11 +90,7 @@ export default function AdminDashboard() {
       ]);
       setSlotsTotal(upcomingRes.total);
       setConfirmedBookingsCount(confirmedRes.total);
-      // Available = upcoming slots that are not booked
-      const available = upcomingRes.data.filter((s) => !s.isBooked).length;
-      // Use a larger fetch for accurate available count
-      const bigRes = await slotsService.getAll(undefined, 'upcoming', 1, 1000);
-      setAvailableSlotsCount(bigRes.data.filter((s) => !s.isBooked).length);
+      setAvailableSlotsCount(upcomingRes.availableCount ?? 0);
     } catch {
       // stats are best-effort
     }

@@ -44,4 +44,5 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   totalPages: number;
+  availableCount?: number;
 }

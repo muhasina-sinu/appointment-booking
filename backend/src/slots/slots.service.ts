@@ -69,7 +69,7 @@ export class SlotsService {
       where.date = { lt: today };
     }
 
-    const [data, total] = await Promise.all([
+    const [data, total, availableCount] = await Promise.all([
       this.prisma.slot.findMany({
         where,
         include: {
@@ -93,6 +93,7 @@ export class SlotsService {
         take: limit,
       }),
       this.prisma.slot.count({ where }),
+      this.prisma.slot.count({ where: { ...where, isBooked: false } }),
     ]);
 
     return {
@@ -100,6 +101,7 @@ export class SlotsService {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+      availableCount,
     };
   }
 
