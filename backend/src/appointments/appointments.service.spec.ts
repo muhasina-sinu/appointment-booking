@@ -472,6 +472,7 @@ describe('AppointmentsService', () => {
         service.adminBook({
           slotId: '00000000-0000-0000-0000-000000000000',
           clientName: 'Walk-in Client',
+          clientPhone: '1234567890',
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -495,6 +496,7 @@ describe('AppointmentsService', () => {
         service.adminBook({
           slotId: 'slot-1',
           clientName: 'Walk-in Client',
+          clientPhone: '1234567890',
         }),
       ).rejects.toThrow(BadRequestException);
 
@@ -502,6 +504,7 @@ describe('AppointmentsService', () => {
         service.adminBook({
           slotId: 'slot-1',
           clientName: 'Walk-in Client',
+          clientPhone: '1234567890',
         }),
       ).rejects.toThrow('This slot is already booked');
     });

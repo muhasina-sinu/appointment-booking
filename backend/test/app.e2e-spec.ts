@@ -196,6 +196,7 @@ describe('Appointment Booking API (e2e)', () => {
         .send({
           slotId: '00000000-0000-0000-0000-000000000000',
           clientName: 'Walk-in',
+          clientPhone: '1234567890',
         })
         .expect(403);
 
