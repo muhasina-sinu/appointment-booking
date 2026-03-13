@@ -27,6 +27,10 @@ export default function DashboardPage() {
       return;
     }
     if (isAuthenticated) {
+      if (user?.role === 'ADMIN') {
+        router.push('/admin');
+        return;
+      }
       fetchAppointments();
     }
   }, [isAuthenticated, authLoading]);

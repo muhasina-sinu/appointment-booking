@@ -25,7 +25,11 @@ export default function LoginClient() {
       const data = await authService.login(email, password);
       login(data.user, data.accessToken);
       toast.success('Signed in successfully');
-      router.push(redirectPath || '/dashboard');
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else {
+        router.push(data.user.role === 'ADMIN' ? '/admin' : '/dashboard');
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
