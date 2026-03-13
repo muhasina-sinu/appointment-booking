@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'USER' | 'ADMIN';
 }
 
@@ -25,6 +26,8 @@ export interface Appointment {
   userId?: string;
   slotId: string;
   clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
   status: 'CONFIRMED' | 'CANCELLED';
   slot: Slot;
   user?: User;

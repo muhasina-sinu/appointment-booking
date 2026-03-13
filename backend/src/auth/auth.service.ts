@@ -16,13 +16,18 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Check if user already exists
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    // Check if user already exists (email or phone)
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: dto.email }, { phone: dto.phone }],
+      },
     });
 
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      if (existingUser.email === dto.email) {
+        throw new ConflictException('Email already registered');
+      }
+      throw new ConflictException('Phone number already registered');
     }
 
     // Hash password
@@ -33,6 +38,7 @@ export class AuthService {
       data: {
         name: dto.name,
         email: dto.email,
+        phone: dto.phone,
         password: hashedPassword,
       },
     });
@@ -45,6 +51,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
       accessToken: token,
@@ -76,6 +83,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
       accessToken: token,

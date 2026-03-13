@@ -23,10 +23,12 @@ export const appointmentsService = {
     return data;
   },
 
-  async adminBook(slotId: string, clientName: string): Promise<Appointment> {
+  async adminBook(slotId: string, clientName: string, clientPhone: string, clientEmail?: string): Promise<Appointment> {
     const { data } = await api.post<Appointment>('/appointments/admin-book', {
       slotId,
       clientName,
+      clientPhone,
+      ...(clientEmail ? { clientEmail } : {}),
     });
     return data;
   },

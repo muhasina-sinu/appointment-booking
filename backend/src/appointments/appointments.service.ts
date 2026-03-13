@@ -69,6 +69,7 @@ export class AppointmentsService {
               id: true,
               name: true,
               email: true,
+              phone: true,
             },
           },
         },
@@ -116,6 +117,8 @@ export class AppointmentsService {
         data: {
           slotId: dto.slotId,
           clientName: dto.clientName,
+          clientPhone: dto.clientPhone,
+          clientEmail: dto.clientEmail,
         },
         include: {
           slot: true,
@@ -142,6 +145,7 @@ export class AppointmentsService {
             id: true,
             name: true,
             email: true,
+            phone: true,
           },
         },
       },
@@ -202,6 +206,7 @@ export class AppointmentsService {
               id: true,
               name: true,
               email: true,
+              phone: true,
             },
           },
         },

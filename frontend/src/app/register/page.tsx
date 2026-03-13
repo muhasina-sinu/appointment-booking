@@ -6,7 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services';
-import { FiMail, FiLock, FiUser, FiUserPlus, FiEye, FiEyeOff, FiArrowLeft } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiUserPlus, FiEye, FiEyeOff, FiArrowLeft, FiPhone } from 'react-icons/fi';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const { login } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,10 +35,15 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!/^\d{10,15}$/.test(phone)) {
+      toast.error('Phone number must be 10–15 digits');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const data = await authService.register(name, email, password);
+      const data = await authService.register(name, email, phone, password);
       login(data.user, data.accessToken);
       toast.success('Account created successfully!');
       router.push(redirectPath || '/dashboard');
@@ -114,6 +120,29 @@ export default function RegisterPage() {
                   placeholder="you@example.com"
                 />
               </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Phone Number
+              </label>
+              <div className="relative">
+                <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  id="phone"
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  className="input-field pl-10"
+                  placeholder="1234567890"
+                  maxLength={15}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">10–15 digits, numbers only</p>
             </div>
 
             <div>

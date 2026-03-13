@@ -11,6 +11,7 @@ model User {
   id           String        @id @default(uuid())
   name         String
   email        String        @unique
+  phone        String        @unique
   password     String
   role         Role          @default(USER)
   createdAt    DateTime      @default(now())
@@ -35,15 +36,17 @@ model Slot {
 }
 
 model Appointment {
-  id         String            @id @default(uuid())
-  userId     String?
-  slotId     String            @unique
-  status     AppointmentStatus @default(CONFIRMED)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  clientName String?
-  slot       Slot              @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  user       User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String            @id @default(uuid())
+  userId      String?
+  slotId      String            @unique
+  status      AppointmentStatus @default(CONFIRMED)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  clientName  String?
+  clientPhone String?
+  clientEmail String?
+  slot        Slot              @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("appointments")
 }

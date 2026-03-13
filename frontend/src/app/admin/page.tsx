@@ -18,6 +18,8 @@ import {
   FiUsers,
   FiList,
   FiUserPlus,
+  FiPhone,
+  FiMail,
 } from 'react-icons/fi';
 
 export default function AdminDashboard() {
@@ -43,6 +45,8 @@ export default function AdminDashboard() {
   // Admin booking state
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [bookingClientName, setBookingClientName] = useState('');
+  const [bookingClientPhone, setBookingClientPhone] = useState('');
+  const [bookingClientEmail, setBookingClientEmail] = useState('');
   const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
@@ -104,14 +108,26 @@ export default function AdminDashboard() {
 
   const handleAdminBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookingSlotId || !bookingClientName.trim()) return;
+    if (!bookingSlotId || !bookingClientName.trim() || !bookingClientPhone.trim()) return;
+
+    if (!/^\d{10,15}$/.test(bookingClientPhone)) {
+      toast.error('Phone number must be 10–15 digits');
+      return;
+    }
 
     setIsBooking(true);
     try {
-      await appointmentsService.adminBook(bookingSlotId, bookingClientName.trim());
+      await appointmentsService.adminBook(
+        bookingSlotId,
+        bookingClientName.trim(),
+        bookingClientPhone.trim(),
+        bookingClientEmail.trim() || undefined,
+      );
       toast.success('Slot booked successfully!');
       setBookingSlotId(null);
       setBookingClientName('');
+      setBookingClientPhone('');
+      setBookingClientEmail('');
       fetchData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to book slot');
@@ -420,6 +436,12 @@ export default function AdminDashboard() {
                             Client
                           </th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                            Phone
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                            Email
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
                             Date
                           </th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
@@ -437,14 +459,15 @@ export default function AdminDashboard() {
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="py-3 px-4">
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {appointment.user?.name || appointment.clientName || 'Walk-in'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {appointment.user?.email || (appointment.clientName ? 'Walk-in booking' : '')}
-                                </p>
-                              </div>
+                              <p className="font-medium text-gray-900">
+                                {appointment.user?.name || appointment.clientName || 'Walk-in'}
+                              </p>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 text-sm">
+                              {appointment.user?.phone || appointment.clientPhone || '—'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 text-sm">
+                              {appointment.user?.email || appointment.clientEmail || '—'}
                             </td>
                             <td className="py-3 px-4 text-gray-600">
                               {new Date(
@@ -490,6 +513,8 @@ export default function AdminDashboard() {
             onClick={() => {
               setBookingSlotId(null);
               setBookingClientName('');
+              setBookingClientPhone('');
+              setBookingClientEmail('');
             }}
           />
           <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
@@ -497,24 +522,64 @@ export default function AdminDashboard() {
               Book Slot for Client
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              Enter the client&apos;s name to book this time slot.
+              Enter the client&apos;s details to book this time slot.
             </p>
-            <form onSubmit={handleAdminBook}>
-              <input
-                type="text"
-                required
-                value={bookingClientName}
-                onChange={(e) => setBookingClientName(e.target.value)}
-                placeholder="Client name"
-                className="input-field mb-4"
-                autoFocus
-              />
-              <div className="flex justify-end gap-3">
+            <form onSubmit={handleAdminBook} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={bookingClientName}
+                  onChange={(e) => setBookingClientName(e.target.value)}
+                  placeholder="Client name"
+                  className="input-field"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="tel"
+                    required
+                    value={bookingClientPhone}
+                    onChange={(e) => setBookingClientPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="1234567890"
+                    className="input-field pl-10"
+                    maxLength={15}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">10–15 digits</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email <span className="text-gray-400 text-xs">(optional)</span>
+                </label>
+                <div className="relative">
+                  <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="email"
+                    value={bookingClientEmail}
+                    onChange={(e) => setBookingClientEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="input-field pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setBookingSlotId(null);
                     setBookingClientName('');
+                    setBookingClientPhone('');
+                    setBookingClientEmail('');
                   }}
                   className="btn-secondary text-sm py-2 px-4"
                 >
@@ -522,7 +587,7 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isBooking || !bookingClientName.trim()}
+                  disabled={isBooking || !bookingClientName.trim() || !bookingClientPhone.trim()}
                   className="btn-primary text-sm py-2 px-4"
                 >
                   {isBooking ? 'Booking...' : 'Book Slot'}

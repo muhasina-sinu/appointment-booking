@@ -12,6 +12,7 @@ async function main() {
     create: {
       name: 'Admin',
       email: 'admin@appointbook.com',
+      phone: '1234567890',
       password: hashedPassword,
       role: Role.ADMIN,
     },
