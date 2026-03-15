@@ -39,12 +39,13 @@ export class AppointmentsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: string,
+    @Query('period') period?: string,
   ) {
     // Admin sees all appointments (paginated), user sees their own
     if (req.user.role === Role.ADMIN) {
       const p = Math.max(1, parseInt(page || '1', 10) || 1);
       const l = Math.min(100, Math.max(1, parseInt(limit || '10', 10) || 10));
-      return this.appointmentsService.findAll(date, p, l, status);
+      return this.appointmentsService.findAll(date, p, l, status, period);
     }
     return this.appointmentsService.findByUser(req.user.id);
   }

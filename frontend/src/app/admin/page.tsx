@@ -86,7 +86,7 @@ export default function AdminDashboard() {
     try {
       const [upcomingRes, confirmedRes] = await Promise.all([
         slotsService.getAll(undefined, 'upcoming', 1, 1),
-        appointmentsService.getAll(undefined, 1, 1, 'CONFIRMED'),
+        appointmentsService.getAll(undefined, 1, 1, 'CONFIRMED', 'upcoming'),
       ]);
       setSlotsTotal(upcomingRes.total);
       setConfirmedBookingsCount(confirmedRes.total);
@@ -100,14 +100,15 @@ export default function AdminDashboard() {
     setIsLoading(true);
     try {
       if (activeTab === 'pastSlots') {
-        // Past Slots tab — fetch only past slots
-        const pastRes = await slotsService.getAll(
+        // Past Bookings tab — fetch past appointments (not slots)
+        const pastRes = await appointmentsService.getAll(
           filterDate || undefined,
-          filterDate ? undefined : 'past',
           pastSlotsPage,
           ITEMS_PER_PAGE,
+          undefined,
+          filterDate ? undefined : 'past',
         );
-        setPastSlots(pastRes.data);
+        setPastSlots(pastRes.data as any);
         setPastSlotsTotal(pastRes.total);
         setPastSlotsTotalPages(pastRes.totalPages);
       } else if (activeTab === 'appointments') {
@@ -115,6 +116,8 @@ export default function AdminDashboard() {
           filterDate || undefined,
           appointmentsPage,
           ITEMS_PER_PAGE,
+          undefined,
+          filterDate ? undefined : 'upcoming',
         );
         setAppointments(apptRes.data);
         setAppointmentsTotal(apptRes.total);
@@ -271,7 +274,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <FiClock className="h-4 w-4" />
-                Past Slots
+                Past Bookings
               </span>
             </button>
             <button
@@ -504,77 +507,75 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Past Slots Tab */}
+            {/* Past Bookings Tab */}
             {activeTab === 'pastSlots' && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Past Slots
+                  Past Bookings
                 </h2>
 
-                {pastSlots.length === 0 ? (
+                {(pastSlots as any[]).length === 0 ? (
                   <EmptyState
-                    title="No Past Slots"
-                    message="No past time slots found."
+                    title="No Past Bookings"
+                    message="No past appointments found."
                   />
                 ) : (
-                  <div className="space-y-3">
-                    {pastSlots.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className="card hover:shadow-md transition-shadow opacity-75"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${
-                                slot.isBooked
-                                  ? 'bg-red-100 text-red-600'
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              <FiClock className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">
-                                {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Client</th>
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Phone</th>
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Email</th>
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Date</th>
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Time</th>
+                          <th className="text-left py-3 px-3 text-sm font-medium text-gray-500">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(pastSlots as any[]).map((appt: any) => (
+                          <tr
+                            key={appt.id}
+                            className="border-b border-gray-100 hover:bg-gray-50 opacity-80"
+                          >
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-gray-700 break-words max-w-[150px]">
+                                {appt.user?.name || appt.clientName || 'Walk-in'}
                               </p>
-                              <p className="text-sm text-gray-500">
-                                {new Date(slot.date).toLocaleDateString(
-                                  'en-US',
-                                  {
-                                    weekday: 'short',
-                                    month: 'short',
-                                    day: 'numeric',
-                                  },
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`text-xs font-medium px-3 py-1 rounded-full ${
-                                slot.isBooked
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {slot.isBooked ? 'Was Booked' : 'Unused'}
-                            </span>
-                            {slot.isBooked && slot.appointment?.user && slot.appointment.status === 'CONFIRMED' && (
-                              <span className="text-sm text-gray-500">
-                                by {slot.appointment.user.name}
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 text-sm whitespace-nowrap">
+                              {appt.user?.phone || appt.clientPhone || '—'}
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 text-sm">
+                              <span className="break-all max-w-[180px] block">
+                                {appt.user?.email || appt.clientEmail || '—'}
                               </span>
-                            )}
-                            {slot.isBooked && slot.appointment?.clientName && slot.appointment.status === 'CONFIRMED' && (
-                              <span className="text-sm text-gray-500">
-                                by {slot.appointment.clientName}
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 text-sm whitespace-nowrap">
+                              {new Date(appt.slot.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 text-sm whitespace-nowrap">
+                              {formatTime(appt.slot.startTime)} – {formatTime(appt.slot.endTime)}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span
+                                className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${
+                                  appt.status === 'CONFIRMED'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}
+                              >
+                                {appt.status}
                               </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
 

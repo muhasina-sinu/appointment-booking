@@ -134,11 +134,19 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async findAll(date?: string, page = 1, limit = 10, status?: string) {
+  async findAll(date?: string, page = 1, limit = 10, status?: string, period?: string) {
     const where: any = {};
 
     if (date) {
       where.slot = { date: new Date(date + 'T00:00:00.000Z') };
+    } else if (period === 'upcoming' || period === 'past') {
+      const now = new Date();
+      const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+      );
+      where.slot = {
+        date: period === 'upcoming' ? { gte: today } : { lt: today },
+      };
     }
 
     if (status === 'CONFIRMED' || status === 'CANCELLED') {

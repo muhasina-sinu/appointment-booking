@@ -7,10 +7,11 @@ export const appointmentsService = {
     return data;
   },
 
-  async getAll(date?: string, page = 1, limit = 10, status?: string): Promise<PaginatedResponse<Appointment>> {
+  async getAll(date?: string, page = 1, limit = 10, status?: string, period?: string): Promise<PaginatedResponse<Appointment>> {
     const params: any = { page, limit };
     if (date) params.date = date;
     if (status) params.status = status;
+    if (period) params.period = period;
     const { data } = await api.get<PaginatedResponse<Appointment>>('/appointments', { params });
     return data;
   },
